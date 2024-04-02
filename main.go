@@ -14,7 +14,7 @@ func main() {
 			"app": pulumi.String(appName),
 		}
 		commands := []string{"/usr/local/bin/content"}
-		args := []string{"content-loader"}
+		args := []string{"content-data"}
 		envVars := corev1.EnvVarArray{
 			corev1.EnvVarArgs{
 				Name:  pulumi.String("S3_BUCKET_PATH"),
