@@ -14,6 +14,13 @@ func main() {
 			"app": pulumi.String(appName),
 		}
 		commands := []string{"/usr/local/bin/content"}
+		args := []string{"content-loader"}
+		envVars := corev1.EnvVarArray{
+			corev1.EnvVarArgs{
+				Name:  pulumi.String("S3_BUCKET_PATH"),
+				Value: pulumi.String("ADD_S3_BUCKET_PATH_VALUE"),
+			},
+		}
 		deployment, err := appsv1.NewDeployment(ctx, appName, &appsv1.DeploymentArgs{
 			Spec: appsv1.DeploymentSpecArgs{
 				Selector: &metav1.LabelSelectorArgs{
@@ -30,6 +37,8 @@ func main() {
 								Name:    pulumi.String(appName),
 								Image:   pulumi.String("dictybase/modware-import:sha-02a6dcd"),
 								Command: pulumi.ToStringArray(commands),
+								Args:    pulumi.ToStringArray(args),
+								Env:     envVars,
 							},
 						},
 					},
