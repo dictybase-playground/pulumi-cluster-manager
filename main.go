@@ -8,39 +8,79 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
 
-
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
-    cfg := config.New(ctx, "")
 		appName := "modware-import"
 		appLabels := pulumi.StringMap{
 			"app": pulumi.String(appName),
 		}
+		cfg := config.New(ctx, "")
+		accessToken := cfg.RequireSecret("ACCESS_TOKEN")
+		secretToken := cfg.RequireSecret("SECRET_TOKEN")
+
+		k8accessTokenSecret, err := corev1.NewSecret(ctx, "accessToken", &corev1.SecretArgs{
+			Metadata: metav1.ObjectMetaArgs{
+				Name: pulumi.String("access-token-secret"),
+			},
+			StringData: pulumi.StringMap{
+				"accessToken": accessToken,
+			},
+		})
+
+		if err != nil {
+			return err
+		}
+
+		k8secretTokenSecret, err := corev1.NewSecret(ctx, "secretToken", &corev1.SecretArgs{
+			Metadata: metav1.ObjectMetaArgs{
+				Name: pulumi.String("access-token-secret"),
+			},
+			StringData: pulumi.StringMap{
+				"secretToken": secretToken,
+			},
+		})
+
+		if err != nil {
+			return err
+		}
+
 		envVars := corev1.EnvVarArray{
 			corev1.EnvVarArgs{
 				Name:  pulumi.String("S3_BUCKET_PATH"),
 				Value: pulumi.String("ADD_S3_BUCKET_PATH_VALUE"),
 			},
-      {
-				Name:  pulumi.String("ACCESS_TOKEN"),
-				Value: pulumi.requireSecret("ACCESS_TOKEN"),
-      },
-      {
-				Name:  pulumi.String("SECRET_TOKEN"),
-				Value: pulumi.requireSecret("SECRET_TOKEN"),
-      },
-    }
+			corev1.EnvVarArgs{
+				Name: pulumi.String("ACCESS_KEY"),
+				ValueFrom: corev1.EnvVarSourceArgs{
+					SecretKeyRef: corev1.SecretKeySelectorArgs{
+						Name: k8accessTokenSecret.Metadata.Name(),
+						Key:  pulumi.String("accessToken"),
+					},
+				},
+			},
+			corev1.EnvVarArgs{
+				Name: pulumi.String("SECRET_TOKEN"),
+				ValueFrom: corev1.EnvVarSourceArgs{
+					SecretKeyRef: corev1.SecretKeySelectorArgs{
+						Name: k8secretTokenSecret.Metadata.Name(),
+						Key:  pulumi.String("secretToken"),
+					},
+				},
+			},
+		}
+
 		commands := []string{"/usr/local/bin/content"}
-    args := []string{
-      "content-data",
-      "--s3-bucket-path=$S3_BUCKET_PATH",
-      "--access-key=$ACCESS_KEY",
-      "--secret-key=$SECRET_KEY",
-    }
-    deployment, err := appsv1.NewDeployment(ctx, appName, &appsv1.DeploymentArgs{
+		args := []string{
+			"content-data",
+			"--s3-bucket-path=$S3_BUCKET_PATH",
+			"--access-key=$ACCESS_KEY",
+			"--secret-key=$SECRET_KEY",
+		}
+
+		deployment, err := appsv1.NewDeployment(ctx, appName, &appsv1.DeploymentArgs{
 			Spec: appsv1.DeploymentSpecArgs{
 				Selector: &metav1.LabelSelectorArgs{
-          MatchLabels: appLabels,
+					MatchLabels: appLabels,
 				},
 				Replicas: pulumi.Int(1),
 				Template: &corev1.PodTemplateSpecArgs{
@@ -61,6 +101,7 @@ func main() {
 				},
 			},
 		})
+
 		if err != nil {
 			return err
 		}
