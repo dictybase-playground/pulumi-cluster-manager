@@ -5,26 +5,42 @@ import (
 	corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
 	metav1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/meta/v1"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
+
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
+    cfg := config.New(ctx, "")
 		appName := "modware-import"
 		appLabels := pulumi.StringMap{
 			"app": pulumi.String(appName),
 		}
-		commands := []string{"/usr/local/bin/content"}
-    args := []string{"content-data", "-h"}
 		envVars := corev1.EnvVarArray{
 			corev1.EnvVarArgs{
 				Name:  pulumi.String("S3_BUCKET_PATH"),
 				Value: pulumi.String("ADD_S3_BUCKET_PATH_VALUE"),
 			},
-		}
-		deployment, err := appsv1.NewDeployment(ctx, appName, &appsv1.DeploymentArgs{
+      {
+				Name:  pulumi.String("ACCESS_TOKEN"),
+				Value: pulumi.requireSecret("ACCESS_TOKEN"),
+      },
+      {
+				Name:  pulumi.String("SECRET_TOKEN"),
+				Value: pulumi.requireSecret("SECRET_TOKEN"),
+      },
+    }
+		commands := []string{"/usr/local/bin/content"}
+    args := []string{
+      "content-data",
+      "--s3-bucket-path=$S3_BUCKET_PATH",
+      "--access-key=$ACCESS_KEY",
+      "--secret-key=$SECRET_KEY",
+    }
+    deployment, err := appsv1.NewDeployment(ctx, appName, &appsv1.DeploymentArgs{
 			Spec: appsv1.DeploymentSpecArgs{
 				Selector: &metav1.LabelSelectorArgs{
-					MatchLabels: appLabels,
+          MatchLabels: appLabels,
 				},
 				Replicas: pulumi.Int(1),
 				Template: &corev1.PodTemplateSpecArgs{
