@@ -10,67 +10,72 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
 
+func getEnvVars(cfg *config.Config, ctx *pulumi.Context) (corev1.EnvVarArray, error) {
+	accessToken := cfg.RequireSecret("ACCESS_TOKEN")
+	secretToken := cfg.RequireSecret("SECRET_TOKEN")
+	s3BucketPath := cfg.Require("S3_BUCKET_PATH")
+
+	k8accessTokenSecret, err := corev1.NewSecret(ctx, "accessToken", &corev1.SecretArgs{
+		Metadata: metav1.ObjectMetaArgs{
+			Name: pulumi.String("access-token-secret"),
+		},
+		StringData: pulumi.StringMap{
+			"accessToken": accessToken,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	k8secretTokenSecret, err := corev1.NewSecret(ctx, "secretToken", &corev1.SecretArgs{
+		Metadata: metav1.ObjectMetaArgs{
+			Name: pulumi.String("access-token-secret"),
+		},
+		StringData: pulumi.StringMap{
+			"secretToken": secretToken,
+		},
+	})
+
+	envVars := corev1.EnvVarArray{
+		corev1.EnvVarArgs{
+			Name:  pulumi.String("S3_BUCKET_PATH"),
+			Value: pulumi.String(s3BucketPath),
+		},
+		corev1.EnvVarArgs{
+			Name: pulumi.String("ACCESS_KEY"),
+			ValueFrom: corev1.EnvVarSourceArgs{
+				SecretKeyRef: corev1.SecretKeySelectorArgs{
+					Name: k8accessTokenSecret.Metadata.Name(),
+					Key:  pulumi.String("accessToken"),
+				},
+			},
+		},
+		corev1.EnvVarArgs{
+			Name: pulumi.String("SECRET_TOKEN"),
+			ValueFrom: corev1.EnvVarSourceArgs{
+				SecretKeyRef: corev1.SecretKeySelectorArgs{
+					Name: k8secretTokenSecret.Metadata.Name(),
+					Key:  pulumi.String("secretToken"),
+				},
+			},
+		},
+	}
+	return envVars, err
+}
+
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
-		jobName := "modware-import"
+		// not sure how to handle defaults
+		cfg := config.New(ctx, "")
+
+		jobName := cfg.Require("JOB_NAME")
 		jobLabels := pulumi.StringMap{
 			"app": pulumi.String(jobName),
 		}
-		cfg := config.New(ctx, "")
-		accessToken := cfg.RequireSecret("ACCESS_TOKEN")
-		secretToken := cfg.RequireSecret("SECRET_TOKEN")
 		imageTag := cfg.Require("IMAGE_TAG")
-		s3BucketPath := cfg.Require("S3_BUCKET_PATH")
-
-		k8accessTokenSecret, err := corev1.NewSecret(ctx, "accessToken", &corev1.SecretArgs{
-			Metadata: metav1.ObjectMetaArgs{
-				Name: pulumi.String("access-token-secret"),
-			},
-			StringData: pulumi.StringMap{
-				"accessToken": accessToken,
-			},
-		})
-
+		envVars, err := getEnvVars(cfg, ctx)
 		if err != nil {
 			return err
-		}
-
-		k8secretTokenSecret, err := corev1.NewSecret(ctx, "secretToken", &corev1.SecretArgs{
-			Metadata: metav1.ObjectMetaArgs{
-				Name: pulumi.String("access-token-secret"),
-			},
-			StringData: pulumi.StringMap{
-				"secretToken": secretToken,
-			},
-		})
-
-		if err != nil {
-			return err
-		}
-
-		envVars := corev1.EnvVarArray{
-			corev1.EnvVarArgs{
-				Name:  pulumi.String("S3_BUCKET_PATH"),
-				Value: pulumi.String(s3BucketPath),
-			},
-			corev1.EnvVarArgs{
-				Name: pulumi.String("ACCESS_KEY"),
-				ValueFrom: corev1.EnvVarSourceArgs{
-					SecretKeyRef: corev1.SecretKeySelectorArgs{
-						Name: k8accessTokenSecret.Metadata.Name(),
-						Key:  pulumi.String("accessToken"),
-					},
-				},
-			},
-			corev1.EnvVarArgs{
-				Name: pulumi.String("SECRET_TOKEN"),
-				ValueFrom: corev1.EnvVarSourceArgs{
-					SecretKeyRef: corev1.SecretKeySelectorArgs{
-						Name: k8secretTokenSecret.Metadata.Name(),
-						Key:  pulumi.String("secretToken"),
-					},
-				},
-			},
 		}
 
 		commands := []string{"/usr/local/bin/content"}
