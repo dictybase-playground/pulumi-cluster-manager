@@ -1,0 +1,7 @@
+config:
+  pulumi-cluster-manager:ACCESS_TOKEN:
+    secure: AAABAOPs6XIk+EXCTtHQD5Qthz0X/npJAOiufCBi3tO6DAPsDsSpFNJvrveksnKJg24DGvcv9pg=
+  pulumi-cluster-manager:IMAGE_TAG: sha-02a6dcd
+  pulumi-cluster-manager:S3_BUCKET_PATH: test
+  pulumi-cluster-manager:SECRET_TOKEN:
+    secure: AAABAELSi4OQKcNgcavlE8qqBWBR30LmVh+DiW4DAMyntiFkpI6gySAWwvgJ
