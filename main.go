@@ -10,10 +10,12 @@ import (
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
-		appName := "modware-import"
+		jobName := "modware-import"
 		appLabels := pulumi.StringMap{
-			"app": pulumi.String(appName),
+			"app": pulumi.String(jobName),
 		}
+		// get these values at runtime: appname, docker image tag
+		// should be a job, not deployment https://www.pulumi.com/registry/packages/kubernetes/api-docs/batch/v1/job/
 		cfg := config.New(ctx, "")
 		accessToken := cfg.RequireSecret("ACCESS_TOKEN")
 		secretToken := cfg.RequireSecret("SECRET_TOKEN")
@@ -77,7 +79,7 @@ func main() {
 			"--secret-key=$SECRET_KEY",
 		}
 
-		deployment, err := appsv1.NewDeployment(ctx, appName, &appsv1.DeploymentArgs{
+		job, err := appsv1.NewDeployment(ctx, jobName, &appsv1.DeploymentArgs{
 			Spec: appsv1.DeploymentSpecArgs{
 				Selector: &metav1.LabelSelectorArgs{
 					MatchLabels: appLabels,
@@ -90,7 +92,7 @@ func main() {
 					Spec: &corev1.PodSpecArgs{
 						Containers: corev1.ContainerArray{
 							corev1.ContainerArgs{
-								Name:    pulumi.String(appName),
+								Name:    pulumi.String(jobName),
 								Image:   pulumi.String("dictybase/modware-import:sha-02a6dcd"),
 								Command: pulumi.ToStringArray(commands),
 								Args:    pulumi.ToStringArray(args),
@@ -106,7 +108,7 @@ func main() {
 			return err
 		}
 
-		ctx.Export("name", deployment.Metadata.Name())
+		ctx.Export("name", job.Metadata.Name())
 		return nil
 	})
 }
