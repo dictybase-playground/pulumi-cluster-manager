@@ -1,7 +1,7 @@
 package main
 
 import (
-	appsv1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/apps/v1"
+	batchv1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/batch/v1"
 	corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
 	metav1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/meta/v1"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -79,12 +79,11 @@ func main() {
 			"--secret-key=$SECRET_KEY",
 		}
 
-		job, err := appsv1.NewDeployment(ctx, jobName, &appsv1.DeploymentArgs{
-			Spec: appsv1.DeploymentSpecArgs{
+		job, err := batchv1.NewJob(ctx, jobName, &batchv1.JobArgs{
+			Spec: batchv1.JobSpecArgs{
 				Selector: &metav1.LabelSelectorArgs{
 					MatchLabels: appLabels,
 				},
-				Replicas: pulumi.Int(1),
 				Template: &corev1.PodTemplateSpecArgs{
 					Metadata: &metav1.ObjectMetaArgs{
 						Labels: appLabels,
