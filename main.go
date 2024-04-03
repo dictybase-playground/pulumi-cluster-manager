@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	batchv1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/batch/v1"
 	corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
 	metav1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/meta/v1"
@@ -11,14 +13,14 @@ import (
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 		jobName := "modware-import"
-		appLabels := pulumi.StringMap{
+		jobLabels := pulumi.StringMap{
 			"app": pulumi.String(jobName),
 		}
-		// get these values at runtime: appname, docker image tag
-		// should be a job, not deployment https://www.pulumi.com/registry/packages/kubernetes/api-docs/batch/v1/job/
 		cfg := config.New(ctx, "")
 		accessToken := cfg.RequireSecret("ACCESS_TOKEN")
 		secretToken := cfg.RequireSecret("SECRET_TOKEN")
+		imageTag := cfg.Require("IMAGE_TAG")
+		s3BucketPath := cfg.Require("S3_BUCKET_PATH")
 
 		k8accessTokenSecret, err := corev1.NewSecret(ctx, "accessToken", &corev1.SecretArgs{
 			Metadata: metav1.ObjectMetaArgs{
@@ -49,7 +51,7 @@ func main() {
 		envVars := corev1.EnvVarArray{
 			corev1.EnvVarArgs{
 				Name:  pulumi.String("S3_BUCKET_PATH"),
-				Value: pulumi.String("ADD_S3_BUCKET_PATH_VALUE"),
+				Value: pulumi.String(s3BucketPath),
 			},
 			corev1.EnvVarArgs{
 				Name: pulumi.String("ACCESS_KEY"),
@@ -81,18 +83,16 @@ func main() {
 
 		job, err := batchv1.NewJob(ctx, jobName, &batchv1.JobArgs{
 			Spec: batchv1.JobSpecArgs{
-				Selector: &metav1.LabelSelectorArgs{
-					MatchLabels: appLabels,
-				},
 				Template: &corev1.PodTemplateSpecArgs{
 					Metadata: &metav1.ObjectMetaArgs{
-						Labels: appLabels,
+						Labels: jobLabels,
 					},
 					Spec: &corev1.PodSpecArgs{
+						RestartPolicy: pulumi.String("Never"),
 						Containers: corev1.ContainerArray{
 							corev1.ContainerArgs{
 								Name:    pulumi.String(jobName),
-								Image:   pulumi.String("dictybase/modware-import:sha-02a6dcd"),
+								Image:   pulumi.String(fmt.Sprintf("dictybase/modware-import:%s", imageTag)),
 								Command: pulumi.ToStringArray(commands),
 								Args:    pulumi.ToStringArray(args),
 								Env:     envVars,
