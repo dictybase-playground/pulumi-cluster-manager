@@ -10,11 +10,18 @@ jobs:
       contents: read
       id-token: write
     steps:
+    - name: setup kops
+      run: |
+         curl -Lo kops  https://github.com/kubernetes/kops/releases/download/v1.27.0/kops-linux-amd64
+         chmod +x kops
+         mv kops ${GITHUB_PATH}/
     - uses: actions/checkout@v4
     - uses: google-github-actions/auth@v2
       with:
         project_id: ${{ secrets.PROJECT_ID }}
         workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-    - name: list s3 buckets
-      run:  gsutil ls
+    - name: what is in path
+      run: ls ${GITHUB_PATH}
+    - name: version run
+      run: kops version
 
