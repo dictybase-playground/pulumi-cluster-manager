@@ -26,7 +26,7 @@ jobs:
         id: restore_dag_check_cache
         uses: actions/cache/restore@v3
         with: 
-          path: $DAGGER_CHECKSUM_PATH
+          path: ${{ env.DAGGER_CHECKSUM_PATH }}
           key: ${{ runner.os }}-${{ steps.dag_check.outputs.dagger_version}}-${{ steps.dag_check.outputs.dagger_bin_checksum }}
       - if: steps.restore_dag_check_cache.outputs.cache-hit != 'true'
         name: install dagger if the checksum cache not restored
@@ -37,21 +37,21 @@ jobs:
         id: create_dag_check_cache
         uses: actions/cache/save@v3 
         with: 
-          path: $DAGGER_CHECKSUM_PATH
+          path: ${{ env.DAGGER_CHECKSUM_PATH }}
           key: ${{ runner.os }}-${{ steps.dag_check.outputs.dagger_version}}-${{ steps.dag_check.outputs.dagger_bin_checksum }}
       - if: steps.restore_dag_check_cache.outputs.cache-hit != 'true'
         name: create binary cache with dagger version and checksum
         id: create_dag_bin_cache
         uses: actions/cache/save@v3 
         with: 
-          path: $DAGGER_BIN_PATH
+          path: ${{ env.DAGGER_BIN_PATH }}
           key: ${{ runner.os }}-${{ steps.dag_check.outputs.dagger_version}}-${{ steps.dag_check.outputs.dagger_bin_checksum }}
       - if: steps.restore_dag_check_cache.outputs.cache-hit == 'true'
         name: restore dagger binary cache with dagger version and checksum
         id: restore_dagger_bin_cache
         uses: actions/cache/restore@v3 
         with: 
-          path: $DAGGER_BIN_PATH
+          path: ${{ env.DAGGER_BIN_PATH }}
           key: ${{ runner.os }}-${{ steps.dag_check.outputs.dagger_version}}-${{ steps.dag_check.outputs.dagger_bin_checksum }}
       - name: now check if we could run dagger
         run: dagger version
