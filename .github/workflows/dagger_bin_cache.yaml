@@ -61,5 +61,5 @@ jobs:
           path: ${{ env.DAGGER_BIN_PATH }}
           key: ${{ runner.os }}-${{ steps.dag_check.outputs.dagger_version}}-${{ steps.dag_check.outputs.dagger_bin_checksum }}
       - name: now check if we could run dagger
-        run: dagger version
+        run: $DAGGER_BIN_PATH/dagger version
 
