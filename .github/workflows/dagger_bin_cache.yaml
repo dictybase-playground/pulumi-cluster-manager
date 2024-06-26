@@ -12,15 +12,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: make all paths
-        run: mkdir -p $ACTION_BIN_PATH $DAGGER_BIN_PATH $DAGGER_CHECKSUM_PATH
+      - name: manage paths
+        run: |
+          mkdir -p $ACTION_BIN_PATH $DAGGER_BIN_PATH $DAGGER_CHECKSUM_PATH
+          echo $ACTION_BIN_PATH >> $GITHUB_PATH
+          echo $DAGGER_BIN_PATH >> $GITHUB_PATH
 
       - name: download and setup path for github actions binary
         run: |
           curl -L -o ${ACTION_BIN_PATH}/actions \
             https://github.com/dictybase-docker/github-actions/releases/download/v2.8.0/action_2.8.0_linux_amd64
           chmod +x ${ACTION_BIN_PATH}/actions
-          echo $ACTION_BIN_PATH >> $GITHUB_PATH
 
       - name: setup dagger version and checksum
         id: dag_check
@@ -61,5 +63,5 @@ jobs:
           path: ${{ env.DAGGER_BIN_PATH }}
           key: ${{ runner.os }}-${{ steps.dag_check.outputs.dagger_version}}-${{ steps.dag_check.outputs.dagger_bin_checksum }}
       - name: now check if we could run dagger
-        run: $DAGGER_BIN_PATH/dagger version
+        run: dagger version
 
