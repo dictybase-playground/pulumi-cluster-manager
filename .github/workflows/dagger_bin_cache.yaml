@@ -1,4 +1,4 @@
-name: Cache Binary Example
+name: cache binary example
 on:
   push:
     branches:
@@ -7,31 +7,37 @@ env:
   ACTION_BIN_PATH: ${GITHUB_WORKSPACE}/github_actions/bin
   DAGGER_BIN_PATH: ${GITHUB_WORKSPACE}/dag/bin
   DAGGER_CHECKSUM_PATH: ${GITHUB_WORKSPACE}/dag/checksum
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: make all paths
         run: mkdir -p $ACTION_BIN_PATH $DAGGER_BIN_PATH $DAGGER_CHECKSUM_PATH
+
       - name: download and setup path for github actions binary
         run: |
           curl -L -o ${ACTION_BIN_PATH}/actions \
             https://github.com/dictybase-docker/github-actions/releases/download/v2.8.0/action_2.8.0_linux_amd64
           chmod +x ${ACTION_BIN_PATH}/actions
           echo $ACTION_BIN_PATH >> $GITHUB_PATH
+
       - name: setup dagger version and checksum
         id: dag_check
         run: actions sc
+
       - name: try to restore dagger version and checksum 
         id: restore_dag_check_cache
         uses: actions/cache/restore@v3
         with: 
           path: ${{ env.DAGGER_CHECKSUM_PATH }}
           key: ${{ runner.os }}-${{ steps.dag_check.outputs.dagger_version}}-${{ steps.dag_check.outputs.dagger_bin_checksum }}
+
       - if: steps.restore_dag_check_cache.outputs.cache-hit != 'true'
         name: install dagger if the checksum cache not restored
         id: dag_install
         run: actions sd --dagger-version ${{ steps.dag_check.outputs.dagger_version }} --dagger-bin-dir $DAGGER_BIN_PATH
+
       - if: steps.restore_dag_check_cache.outputs.cache-hit != 'true'
         name: create cache with dagger version and checksum
         id: create_dag_check_cache
@@ -46,6 +52,7 @@ jobs:
         with: 
           path: ${{ env.DAGGER_BIN_PATH }}
           key: ${{ runner.os }}-${{ steps.dag_check.outputs.dagger_version}}-${{ steps.dag_check.outputs.dagger_bin_checksum }}
+
       - if: steps.restore_dag_check_cache.outputs.cache-hit == 'true'
         name: restore dagger binary cache with dagger version and checksum
         id: restore_dagger_bin_cache
